@@ -15,27 +15,26 @@ NEST_DEVICE_ID = os.getenv("NEST_DEVICE_ID")
 NEST_DEVICE_NAME = os.getenv("NEST_DEVICE_NAME")
 REFRESH_INTERVAL_MINS = float(os.getenv("REFRESH_INTERVAL_MINS"))
 NTFY_ENDPOINT = os.getenv("NTFY_ENDPOINT")
+MAX_RECONNECT_ATTEMPTS = 3
 
 assert GOOGLE_MASTER_TOKEN and GOOGLE_USERNAME and NEST_DEVICE_ID and NEST_DEVICE_NAME and REFRESH_INTERVAL_MINS and NTFY_ENDPOINT
 
 def main():
-    logger.info("Initializing the Google connection using the master_token")
-    google_connection = GoogleConnection(GOOGLE_MASTER_TOKEN, GOOGLE_USERNAME)
-
-    logger.info(f"Retrieving events for device ID: {NEST_DEVICE_ID}")
-    
-    try:
+    def connect():
+        google_connection = GoogleConnection(GOOGLE_MASTER_TOKEN, GOOGLE_USERNAME)
         device = google_connection.get_nest_camera(NEST_DEVICE_ID, NEST_DEVICE_NAME)
-    except:
-        logger.error(f"Device with ID {NEST_DEVICE_ID} not found.")
-        return
-    
+        return google_connection, device
+
+    reconnect_attempts = 0
+    google_connection, device = connect()
+
+    logger.info(f"Connected to device ID: {NEST_DEVICE_ID}")
+
     # Initialize the last checked time to now minus the refresh interval
     last_checked_time = pytz.timezone("Europe/London").localize(datetime.datetime.now() - datetime.timedelta(minutes=REFRESH_INTERVAL_MINS))
 
     notification_text = f"🐱 Cat detector initialised at {pytz.timezone('Europe/London').localize(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M:%S')}."
-    requests.post(NTFY_ENDPOINT,
-                data=notification_text.encode(encoding='utf-8'))
+    requests.post(NTFY_ENDPOINT, data=notification_text.encode(encoding='utf-8'))
 
     while True:
         loop_start_time = time.time()
@@ -53,11 +52,25 @@ def main():
                 logger.info(f"Event: Start Time: {event.start_time}, End Time: {event.end_time}")
                 # Send notification for each event
                 notification_text = f"🐱 Cat spotted at {event.start_time.replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Europe/London')).strftime('%Y-%m-%d %H:%M:%S')}!"
-                requests.post(NTFY_ENDPOINT,
-                            data=notification_text.encode(encoding='utf-8'))
+                requests.post(NTFY_ENDPOINT, data=notification_text.encode(encoding='utf-8'))
+            
+            # Reset reconnect attempts on successful operation
+            reconnect_attempts = 0
         
         except Exception as e:
             logger.error(f"An error occurred while fetching or processing events: {e}")
+            
+            if reconnect_attempts < MAX_RECONNECT_ATTEMPTS:
+                logger.info(f"Attempting to reconnect. Attempt {reconnect_attempts + 1} of {MAX_RECONNECT_ATTEMPTS}")
+                try:
+                    google_connection, device = connect()
+                    reconnect_attempts += 1
+                    continue  # Skip to the next iteration of the loop
+                except Exception as reconnect_error:
+                    logger.error(f"Failed to reconnect: {reconnect_error}")
+            else:
+                logger.error("Maximum reconnection attempts reached. Exiting.")
+                return
         
         # Update the last checked time for the next iteration
         last_checked_time = current_time
