@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Alerting Dashboard</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #FFF0F5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #FF69B4;
+            margin-bottom: 20px;
+        }
+        .status {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        #status {
+            font-weight: bold;
+            color: #FF69B4;
+        }
+        #toggleButton {
+            background-color: #FF69B4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 16px;
+        }
+        #toggleButton:hover {
+            background-color: #FF1493;
+        }
+        .cat-icon::before {
+            content: '🐱';
+            font-size: 40px;
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="cat-icon"></div>
+        <h1>Cat Alerting Dashboard</h1>
+        <p class="status">Kitty detector is currently: <span id="status">{{ "Running" if is_running else "Stopped" }}</span></p>
+        <button id="toggleButton" onclick="toggleScript()">
+            {{ "Pause Purr Patrol" if is_running else "Start Meow Monitor" }}
+        </button>
+    </div>
+
+    <script>
+    function toggleScript() {
+        const action = document.getElementById('status').textContent === "Running" ? '/stop' : '/start';
+        fetch(action)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('status').textContent = data.status;
+                updateButtonText();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Oops! The kitty got tangled in the yarn. Please try again.');
+            });
+    }
+
+    function updateButtonText() {
+        const button = document.getElementById('toggleButton');
+        const status = document.getElementById('status').textContent;
+        button.textContent = status === "Running" ? "Pause Purr Patrol" : "Start Meow Monitor";
+    }
+    </script>
+</body>
+</html>
