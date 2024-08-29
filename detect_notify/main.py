@@ -33,7 +33,7 @@ def main():
     # Initialize the last checked time to now minus the refresh interval
     last_checked_time = pytz.timezone("Europe/London").localize(datetime.datetime.now() - datetime.timedelta(minutes=REFRESH_INTERVAL_MINS))
 
-    notification_text = f"🐱 Cat detector initialised at {pytz.timezone("Europe/London").localize(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M:%S')}."
+    notification_text = f"🐱 Cat detector initialised at {pytz.timezone('Europe/London').localize(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M:%S')}."
     requests.post(NTFY_ENDPOINT,
                 data=notification_text.encode(encoding='utf-8'))
 
